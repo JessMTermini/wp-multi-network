@@ -5,6 +5,7 @@
 [![License](https://poser.pugx.org/stuttter/wp-multi-network/license)](https://packagist.org/packages/stuttter/wp-multi-network)
 
 # WP Multi Network
+**See Updated Wiki for more detailed installation instructions and creating an updated sunrise.php compatible with php 8.2.20 and Wordpress 6.8.1: [https://github.com/JessMTermini/wp-multi-network/wiki/Gemini-AI-Updated-sunrise.php-for-PHP-8.2.20-&-WordPress-6.8.1](https://github.com/JessMTermini/wp-multi-network/wiki/Gemini-AI-Updated-sunrise.php-for-PHP-8.2.20-&-WordPress-6.8.1)**
 
 Provides a Network Management Interface for global administrators in WordPress Multisite installations.
 
