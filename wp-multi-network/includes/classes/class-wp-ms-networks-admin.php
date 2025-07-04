@@ -20,7 +20,7 @@ class WP_MS_Networks_Admin {
 	 * Internal storage for feedback strings to avoid generating them multiple times.
 	 *
 	 * @since 2.0.0
-	 * @var array
+	 * @var array<string, array<int, string>>
 	 */
 	private $feedback_strings = array();
 
@@ -32,14 +32,13 @@ class WP_MS_Networks_Admin {
 	 * @since 1.3.0
 	 */
 	public function __construct() {
-		$this->set_feedback_strings();
-
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'network_admin_menu', array( $this, 'network_admin_menu' ) );
 		add_action( 'network_admin_menu', array( $this, 'network_admin_menu_separator' ) );
 
 		add_action( 'admin_init', array( $this, 'route_save_handlers' ) );
 
+		add_action( 'admin_init', array( $this, 'set_feedback_strings' ) );
 		add_action( 'network_admin_notices', array( $this, 'network_admin_notices' ) );
 
 		add_filter( 'manage_sites_action_links', array( $this, 'add_move_blog_link' ), 10, 2 );
@@ -52,9 +51,9 @@ class WP_MS_Networks_Admin {
 	 *
 	 * @since 1.3.0
 	 *
-	 * @param array $actions Array of action links.
-	 * @param int   $blog_id Current site ID.
-	 * @return array Adjusted action links.
+	 * @param array<string, string> $actions Array of action links.
+	 * @param int                   $blog_id Current site ID.
+	 * @return array<string, string> Adjusted action links.
 	 */
 	public function add_move_blog_link( $actions = array(), $blog_id = 0 ) {
 
@@ -84,6 +83,7 @@ class WP_MS_Networks_Admin {
 	 * permissions on the current site.
 	 *
 	 * @since 1.3.0
+	 * @return void
 	 */
 	public function admin_menu() {
 
@@ -102,6 +102,7 @@ class WP_MS_Networks_Admin {
 	 * WP_MS_Networks_List_Table class also.
 	 *
 	 * @since 1.3.0
+	 * @return void
 	 */
 	public function network_admin_menu() {
 		$page = add_menu_page( esc_html__( 'Networks', 'wp-multi-network' ), esc_html__( 'Networks', 'wp-multi-network' ), 'manage_networks', 'networks', array( $this, 'route_pages' ), 'dashicons-networking', -1 );
@@ -119,6 +120,7 @@ class WP_MS_Networks_Admin {
 	 * network dashboard.
 	 *
 	 * @since 1.5.2
+	 * @return void
 	 */
 	public function network_admin_menu_separator() {
 		$GLOBALS['menu']['-2'] = array( '', 'read', 'separator', '', 'wp-menu-separator' ); // phpcs:ignore WordPress.Variables.GlobalVariables.OverrideProhibited
@@ -132,6 +134,7 @@ class WP_MS_Networks_Admin {
 	 *
 	 * @global string $plugin_page
 	 * @global string $submenu_file
+	 * @return void
 	 */
 	public function fix_menu_highlight_for_move_page() {
 		global $plugin_page, $submenu_file;
@@ -150,6 +153,7 @@ class WP_MS_Networks_Admin {
 	 * @since 2.0.0
 	 *
 	 * @param string $page Optional. Current page hook. Default empty string.
+	 * @return void
 	 */
 	public function enqueue_scripts( $page = '' ) {
 
@@ -158,7 +162,7 @@ class WP_MS_Networks_Admin {
 			return;
 		}
 
-		wp_register_style( 'wp-multi-network', wpmn()->plugin_url . 'assets/css/wp-multi-network.css', array(), wpmn()->asset_version, false );
+		wp_register_style( 'wp-multi-network', wpmn()->plugin_url . 'assets/css/wp-multi-network.css', array(), wpmn()->asset_version );
 		wp_register_script( 'wp-multi-network', wpmn()->plugin_url . 'assets/js/wp-multi-network.js', array( 'jquery', 'post' ), wpmn()->asset_version, true );
 
 		wp_enqueue_style( 'wp-multi-network' );
@@ -169,8 +173,9 @@ class WP_MS_Networks_Admin {
 	 * Sets feedback strings for network admin actions.
 	 *
 	 * @since 2.1.0
+	 * @return void
 	 */
-	private function set_feedback_strings() {
+	public function set_feedback_strings() {
 		$this->feedback_strings = array(
 			'network_updated' => array(
 				'1' => esc_html__( 'Network updated.', 'wp-multi-network' ),
@@ -195,6 +200,7 @@ class WP_MS_Networks_Admin {
 	 * Prints feedback notices for network admin actions as necessary.
 	 *
 	 * @since 1.3.0
+	 * @return void
 	 */
 	public function network_admin_notices() {
 		$message = '';
@@ -234,6 +240,7 @@ class WP_MS_Networks_Admin {
 	 * Routes the current request to the correct page.
 	 *
 	 * @since 2.0.0
+	 * @return void
 	 */
 	public function route_pages() {
 
@@ -242,7 +249,7 @@ class WP_MS_Networks_Admin {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'wp-multi-network' ) );
 		}
 
-		$action = filter_input( INPUT_GET, 'action', FILTER_SANITIZE_STRING );
+		$action = filter_input( INPUT_GET, 'action', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
 		$action = sanitize_key( $action );
 
 		switch ( $action ) {
@@ -264,9 +271,9 @@ class WP_MS_Networks_Admin {
 
 			// View the list of networks, with bulk action handling.
 			case 'all_networks':
-				$doaction = filter_input( INPUT_POST, 'action', FILTER_SANITIZE_STRING );
+				$doaction = filter_input( INPUT_POST, 'action', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
 				if ( empty( $doaction ) || '-1' === $doaction ) {
-					$doaction = filter_input( INPUT_POST, 'action2', FILTER_SANITIZE_STRING );
+					$doaction = filter_input( INPUT_POST, 'action2', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
 				}
 				$doaction = sanitize_key( $doaction );
 
@@ -291,6 +298,7 @@ class WP_MS_Networks_Admin {
 	 * Handles network management form submissions.
 	 *
 	 * @since 2.0.0
+	 * @return void
 	 */
 	public function route_save_handlers() {
 
@@ -300,7 +308,7 @@ class WP_MS_Networks_Admin {
 			return;
 		}
 
-		$action = filter_input( INPUT_POST, 'action', FILTER_SANITIZE_STRING );
+		$action = filter_input( INPUT_POST, 'action', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
 		if ( empty( $action ) ) {
 			$alternative_actions = array( 'delete', 'delete_multiple', 'move' );
 			foreach ( $alternative_actions as $alternative_action ) {
@@ -350,9 +358,10 @@ class WP_MS_Networks_Admin {
 	 * Renders the new network creation dashboard page.
 	 *
 	 * @since 2.0.0
+	 * @return void
 	 */
 	public function page_edit_network() {
-		$network_id = filter_input( INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT );
+		$network_id = (int) filter_input( INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT );
 		$network    = $network_id ? get_network( $network_id ) : null;
 
 		add_meta_box( 'wpmn-edit-network-details', esc_html__( 'Details', 'wp-multi-network' ), 'wpmn_edit_network_details_metabox', get_current_screen()->id, 'normal', 'high', array( $network ) );
@@ -397,7 +406,7 @@ class WP_MS_Networks_Admin {
 						<div id="post-body-content">
 							<div id="titlediv">
 								<div id="titlewrap">
-									<label class="screen-reader-text" id="title-prompt-text" for="title"><?php echo esc_html_e( 'Enter network title here', 'wp-multi-network' ); ?></label>
+									<label class="screen-reader-text" id="title-prompt-text" for="title"><?php esc_html_e( 'Enter network title here', 'wp-multi-network' ); ?></label>
 									<input type="text" name="title" size="30" id="title" spellcheck="true" autocomplete="off" value="<?php echo esc_attr( $network_title ); ?>">
 								</div>
 							</div>
@@ -425,6 +434,7 @@ class WP_MS_Networks_Admin {
 	 * @since 2.0.0
 	 *
 	 * @uses WP_MS_Networks_List_Table List_Table iterator for networks
+	 * @return void
 	 */
 	private function page_all_networks() {
 		$wp_list_table = new WP_MS_Networks_List_Table();
@@ -434,7 +444,7 @@ class WP_MS_Networks_Admin {
 		$all_networks_url = $this->admin_url( array( 'action' => 'all_networks' ) );
 		$search_url       = $this->admin_url( array( 'action' => 'domains' ) );
 
-		$search_text = filter_input( INPUT_POST, 's', FILTER_SANITIZE_STRING );
+		$search_text = filter_input( INPUT_POST, 's', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
 		?>
 
 		<div class="wrap">
@@ -474,9 +484,10 @@ class WP_MS_Networks_Admin {
 	 * Renders the dashboard screen for moving sites -- accessed from the "Sites" screen.
 	 *
 	 * @since 2.0.0
+	 * @return void
 	 */
 	private function page_move_site() {
-		$site_id = filter_input( INPUT_GET, 'blog_id', FILTER_SANITIZE_NUMBER_INT );
+		$site_id = (int) filter_input( INPUT_GET, 'blog_id', FILTER_SANITIZE_NUMBER_INT );
 		$site    = $site_id ? get_site( $site_id ) : null;
 
 		// Bail if invalid site ID.
@@ -524,7 +535,7 @@ class WP_MS_Networks_Admin {
 
 			<hr class="wp-header-end">
 
-			<form method="post" action="<?php echo esc_attr( filter_input( INPUT_SERVER, 'REQUEST_URI', FILTER_SANITIZE_STRING ) ); ?>">
+			<form method="post" action="<?php echo esc_attr( filter_input( INPUT_SERVER, 'REQUEST_URI', FILTER_SANITIZE_FULL_SPECIAL_CHARS ) ); ?>">
 				<div id="poststuff">
 					<div id="post-body" class="metabox-holder columns-2">
 						<div id="postbox-container-1" class="postbox-container">
@@ -547,9 +558,10 @@ class WP_MS_Networks_Admin {
 	 * Renders the delete network page.
 	 *
 	 * @since 2.0.0
+	 * @return void
 	 */
 	private function page_delete_network() {
-		$network_id = filter_input( INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT );
+		$network_id = (int) filter_input( INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT );
 		$network    = $network_id ? get_network( $network_id ) : null;
 
 		// Bail if invalid network ID.
@@ -638,6 +650,7 @@ class WP_MS_Networks_Admin {
 	 * Renders the delete multiple networks page.
 	 *
 	 * @since 2.0.0
+	 * @return void
 	 */
 	private function page_delete_networks() {
 		$network_id   = get_main_network_id();
@@ -757,6 +770,7 @@ class WP_MS_Networks_Admin {
 	 * @since 2.0.0
 	 *
 	 * @global wpdb $wpdb WordPress database abstraction object.
+	 * @return void
 	 */
 	public function page_my_networks() {
 		global $wpdb;
@@ -793,6 +807,7 @@ class WP_MS_Networks_Admin {
 				}
 				$num_rows = ceil( $num / $cols );
 				$split    = 0;
+				$rows     = array();
 				for ( $i = 1; $i <= $num_rows; $i++ ) {
 					$rows[] = array_slice( $my_networks, $split, $cols );
 					$split  = $split + $cols;
@@ -826,14 +841,14 @@ class WP_MS_Networks_Admin {
 								 * @param string     $network_actions Network action links, separated by pipe ( | ) characters.
 								 * @param WP_Network $network         Current network object.
 								 */
-								echo apply_filters( 'mynetworks_network_actions', $network_actions, $network ); // phpcs:ignore WordPress.XSS.EscapeOutput.OutputNotEscaped
+								echo apply_filters( 'mynetworks_network_actions', $network_actions, $network ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 								?>
 							</p>
 						</td>
 
 						<?php
 						restore_current_network();
-						$i++;
+						++$i;
 					}
 					echo '</tr>';
 				}
@@ -848,6 +863,7 @@ class WP_MS_Networks_Admin {
 	 * Handles the request to add a new network.
 	 *
 	 * @since 2.0.0
+	 * @return void
 	 */
 	private function handle_add_network() {
 
@@ -864,10 +880,10 @@ class WP_MS_Networks_Admin {
 		}
 
 		// Sanitize values.
-		$network_title  = wp_unslash( filter_input( INPUT_POST, 'title', FILTER_SANITIZE_STRING ) );
-		$network_domain = wp_unslash( filter_input( INPUT_POST, 'domain', FILTER_SANITIZE_STRING ) );
-		$network_path   = wp_unslash( filter_input( INPUT_POST, 'path', FILTER_SANITIZE_STRING ) );
-		$site_name      = wp_unslash( filter_input( INPUT_POST, 'new_site', FILTER_SANITIZE_STRING ) );
+		$network_title  = wp_unslash( filter_input( INPUT_POST, 'title', FILTER_SANITIZE_FULL_SPECIAL_CHARS ) );
+		$network_domain = wp_unslash( filter_input( INPUT_POST, 'domain', FILTER_SANITIZE_FULL_SPECIAL_CHARS ) );
+		$network_path   = wp_unslash( filter_input( INPUT_POST, 'path', FILTER_SANITIZE_FULL_SPECIAL_CHARS ) );
+		$site_name      = wp_unslash( filter_input( INPUT_POST, 'new_site', FILTER_SANITIZE_FULL_SPECIAL_CHARS ) );
 
 		// Additional formatting.
 		$network_title  = wp_strip_all_tags( $network_title );
@@ -940,11 +956,12 @@ class WP_MS_Networks_Admin {
 	 * Handles the request to update a network.
 	 *
 	 * @since 2.0.0
+	 * @return void
 	 */
 	private function handle_update_network() {
 
 		// Sanitize network ID.
-		$network_id = filter_input( INPUT_POST, 'network_id', FILTER_SANITIZE_NUMBER_INT );
+		$network_id = (int) filter_input( INPUT_POST, 'network_id', FILTER_SANITIZE_NUMBER_INT );
 
 		// Bail if invalid network.
 		if ( ! get_network( $network_id ) ) {
@@ -952,9 +969,9 @@ class WP_MS_Networks_Admin {
 		}
 
 		// Sanitize values.
-		$network_title  = wp_unslash( filter_input( INPUT_POST, 'title', FILTER_SANITIZE_STRING ) );
-		$network_domain = wp_unslash( filter_input( INPUT_POST, 'domain', FILTER_SANITIZE_STRING ) );
-		$network_path   = wp_unslash( filter_input( INPUT_POST, 'path', FILTER_SANITIZE_STRING ) );
+		$network_title  = wp_unslash( filter_input( INPUT_POST, 'title', FILTER_SANITIZE_FULL_SPECIAL_CHARS ) );
+		$network_domain = wp_unslash( filter_input( INPUT_POST, 'domain', FILTER_SANITIZE_FULL_SPECIAL_CHARS ) );
+		$network_path   = wp_unslash( filter_input( INPUT_POST, 'path', FILTER_SANITIZE_FULL_SPECIAL_CHARS ) );
 
 		// Additional formatting.
 		$network_title  = sanitize_text_field( $network_title );
@@ -1002,12 +1019,13 @@ class WP_MS_Networks_Admin {
 	 * Handles the request to move a site to another network.
 	 *
 	 * @since 2.0.0
+	 * @return void
 	 */
 	private function handle_move_site() {
 
 		// Sanitize values.
-		$site_id     = filter_input( INPUT_GET, 'blog_id', FILTER_SANITIZE_NUMBER_INT );
-		$new_network = filter_input( INPUT_POST, 'to', FILTER_SANITIZE_NUMBER_INT );
+		$site_id     = (int) filter_input( INPUT_GET, 'blog_id', FILTER_SANITIZE_NUMBER_INT );
+		$new_network = (int) filter_input( INPUT_POST, 'to', FILTER_SANITIZE_NUMBER_INT );
 
 		// Bail if no site ID.
 		if ( empty( $site_id ) ) {
@@ -1062,6 +1080,7 @@ class WP_MS_Networks_Admin {
 	 * Handles the request to reassign sites to another network.
 	 *
 	 * @since 2.0.0
+	 * @return void
 	 */
 	private function handle_reassign_sites() {
 
@@ -1075,7 +1094,7 @@ class WP_MS_Networks_Admin {
 		}
 
 		// Sanitize network ID.
-		$network_id = filter_input( INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT );
+		$network_id = (int) filter_input( INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT );
 
 		// Default to/from arrays.
 		$moving_to   = array();
@@ -1126,11 +1145,12 @@ class WP_MS_Networks_Admin {
 	 * Handles the request to delete a network.
 	 *
 	 * @since 2.0.0
+	 * @return void
 	 */
 	private function handle_delete_network() {
 
 		// Sanitize values.
-		$network_id = filter_input( INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT );
+		$network_id = (int) filter_input( INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT );
 		$override   = (bool) filter_input( INPUT_POST, 'override' );
 
 		// Attempt to delete network.
@@ -1153,6 +1173,7 @@ class WP_MS_Networks_Admin {
 	 * Handles the request to delete multiple networks.
 	 *
 	 * @since 2.0.0
+	 * @return void
 	 */
 	private function handle_delete_networks() {
 
@@ -1187,7 +1208,8 @@ class WP_MS_Networks_Admin {
 	 *
 	 * @since 2.0.0
 	 *
-	 * @param array $args Optional. URL query arguments. Default empty array.
+	 * @param array<string, string> $args Optional. URL query arguments. Default empty array.
+	 * @return void
 	 */
 	private function handle_redirect( $args = array() ) {
 		wp_safe_redirect( $this->admin_url( $args ) );
@@ -1199,7 +1221,7 @@ class WP_MS_Networks_Admin {
 	 *
 	 * @since 1.3.0
 	 *
-	 * @param array $args Optional. URL query arguments. Default empty array.
+	 * @param array<string, string> $args Optional. URL query arguments. Default empty array.
 	 * @return string Absolute URL to the networks page.
 	 */
 	private function admin_url( $args = array() ) {
@@ -1236,6 +1258,7 @@ class WP_MS_Networks_Admin {
 	 * Checks the nonce for a network management form submission.
 	 *
 	 * @since 2.1.0
+	 * @return void
 	 */
 	private function check_nonce() {
 		check_admin_referer( 'edit_network', 'network_edit' );
